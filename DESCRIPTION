@@ -1,8 +1,7 @@
 Package: PriorKnowledgeEpistasisRank
 Title: PriorKnowledgeEpistasisRank
 Version: 0.0.0.9000
-Authors@R: c(person("Saeid", "Parvandeh", email = "parvandehsaied@gmail.com", role = c("aut", "cre")), 
-             person("Brett", "McKinney", email = "brett-mckinney@utulsa.edu", role = c("aut", "cre")))
+Authors@R: person("Saeid", "Parvandeh", email = "parvandehsaied@gmail.com", role = c("aut", "cre"))
 Description: Expression epistasis network feature selection with prior knowledge from IMP functional interactions.
 Depends: R (>= 3.4.1)
 License: What license is it under?
