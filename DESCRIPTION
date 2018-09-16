@@ -1,5 +1,5 @@
-Package: stir
-Title: What the Package Does (one line, title case)
+Package: PriorKnowledgeEpistasisRank
+Title: Expression epistasis network feature selection with prior knowledge from IMP functional interactions
 Version: 0.0.0.9000
 Authors@R: person("Saeid", "Parvandeh", email = "parvandehsaied@gmail.com", role = c("aut", "cre"))
 Authors@R: person("Brett", "McKinney", email = "brett-mckinney@utulsa.edu", role = c("aut", "cre"))
