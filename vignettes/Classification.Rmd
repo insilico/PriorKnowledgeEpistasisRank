@@ -1,7 +1,7 @@
 ---
-title: 'EpistasisRank and Epistasis-Katz: incorporating prior knowledge for pathway enrichment and classification'
+title: "Classification with and without prior knowledge"
 author: "Saeid Parvandeh"
-date: "9/5/2018"
+date: "9/16/2018"
 output: html_document
 ---
 
@@ -9,231 +9,16 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 ```
 
-## Pathway Analysis
-
+### Install required libraries
 ```{r}
-library(igraph)
 library(SDMTools)
 library(Rinbix)
 library(ggplot2)
 library(caret)
 library(xgboost)
 library(gridExtra)
-library(privateEC)
 ```
 
-Loading required data for pathway analysis
-```{r}
-source("helper_functions.R")
-# load MDD microarray data
-load("camb_fltr.expr.RData")
-load("camb_sub_class.RData")
-load("jap_fltr.expr.RData")
-load("jap_class.RData")
-
-# load reGAIN and IMP query network
-load("camb_reGAIN.RData")
-load("jap_reGAIN.RData")
-load("impNetwork.RData")
-```
-
-### Centrality methods without prior knowledge
-#### PageRank
-```{r}
-camb_expre.cor <- cor(camb_fltr.expr)
-# co-expression to binary
-camb_Adj <- ifelse(abs(camb_expre.cor) > .15, 1, 0)
-diag(camb_Adj) <- 0
-
-# Adjacency matrix to graph
-camb_Adj_g <- igraph::graph.adjacency(camb_Adj)
-# page_woPKRank centrality
-camb_page_woPK <- page.rank(camb_Adj_g)$vector
-camb_page_woPK.sort <- sort(camb_page_woPK, T)
-
-top_camb_page_woPK <- camb_page_woPK.sort[1:200]
-```
-
-#### Katz
-```{r}
-a <- eigen(camb_Adj)
-beta <- rep(1, nrow(camb_Adj))/nrow(camb_Adj)
-alpha <- 1/max(a$values) - (1/max(a$values))/100
-camb_katz_woPK <- katz.centrality(camb_Adj, alpha, beta)
-names(camb_katz_woPK) <- colnames(camb_Adj)
-camb_katz_woPK.sort <- sort(camb_katz_woPK, T)
-
-top_camb_katz_woPK <- camb_katz_woPK.sort[1:200]
-```
-
-#### EpistasisKatz
-```{r}
-alpha <- 1/mean(colSums(camb_reGAIN))
-beta <- diag(camb_reGAIN)
-camb_regain.Katz <- camb_reGAIN
-diag(camb_regain.Katz) <- 0
-camb_EK_woPK <- katz.centrality(camb_regain.Katz, alpha, beta)
-names(camb_EK_woPK) <- rownames(camb_reGAIN) 
-camb_EK_woPK.sort <- sort(camb_EK_woPK, T)
-
-top_camb_EK_woPK <- camb_EK_woPK.sort[1:200]
-```
-
-#### EpistasisRank
-```{r}
-camb_ER_woPK <- EpistasisRank(camb_reGAIN, Gamma_vec = .85)
-top_camb_ER_woPK <- camb_ER_woPK[1:200, ]
-```
-
-#### Coefficient of Variation (cov) filtering
-```{r}
-exprData <- t(camb_fltr.expr)
-top_camb_cov <- t(cov.filter(exprData,.4874)$fdata) # 200 genes
-```
-
-### Centrality method with prior knowledge
-#### PageRank
-```{r}
-# prior knowledge
-impgraph <- graph_from_adjacency_matrix(impNetwork, mode = "undirected", diag = TRUE, add.rownames = NA)
-IMP_deg <- degree(impgraph, normalized = TRUE, loops = FALSE)
-camb_page_wPK <- as.numeric(my.pagerank(camb_Adj, IMP_deg))
-names(camb_page_wPK) <- rownames(camb_Adj) 
-camb_page_wPK.sort <- sort(camb_page_wPK, T)
-top_camb_page_wPK <- camb_page_wPK.sort[1:200]
-```
-
-#### Katz
-```{r}
-alpha <- 1/max(a$values) - (1/max(a$values))/100
-camb_katz_wPK <- katz.centrality(camb_Adj, alpha, beta = IMP_deg)
-names(camb_katz_wPK) <- rownames(camb_Adj) 
-camb_katz_wPK.sort <- sort(camb_katz_wPK, T)
-top_camb_katz_wPK <- camb_katz_wPK.sort[1:200]
-```
-
-#### EpistasisKatz
-```{r}
-beta <- diag(camb_reGAIN)
-camb_regain.Katz <- camb_reGAIN
-diag(camb_regain.Katz) <- 0
-camb_ekatz_wPK <- katz.centrality(camb_regain.Katz, IMP_deg, beta)
-names(camb_ekatz_wPK) <- rownames(camb_Adj) 
-camb_ekatz_wPK.sort <- sort(camb_ekatz_wPK, T)
-top_camb_EK_wPK <- camb_ekatz_wPK.sort[1:200]
-```
-
-#### EpistasisRank
-```{r}
-camb_ER_wPK <- EpistasisRank(camb_reGAIN, IMP_deg)
-top_camb_ER_wPK <- camb_ER_wPK[1:200, ]
-```
-
-### Pathway Plots
-```{r, fig.width=10, fig.height=8}
-pathways <- read.csv("Reactome_pathways.csv", header = TRUE)
-
-my_pathways_woPK <- cbind(names(top_camb_page_woPK), names(top_camb_katz_woPK), 
-                          names(top_camb_EK_woPK), as.character(top_camb_ER_woPK$gene), colnames(top_camb_cov))
-colnames(my_pathways_woPK) <- c("Page_woPK", "Katz_woPK", "EK_woPK", "ER_woPK", "CoV")
-save(my_pathways_woPK, file = "my_pathways_woPK.RData")
-pathway_mat_woPK <- matrix(0, 5, 9)
-for (i in 1:5){
-  for (j in 1:9){
-    pathway_mat_woPK[i, j] <- length(intersect(my_pathways_woPK[, i], as.character(pathways[, j])))
-  }
-}
-
-my_pathways_wPK <- cbind(names(top_camb_page_wPK), names(top_camb_katz_wPK), 
-                         names(top_camb_EK_wPK), as.character(top_camb_ER_wPK$gene))
-
-colnames(my_pathways_wPK) <- c("Page_wPK", "Katz_wPK", "EK_wPK", "ER_wPK")
-save(my_pathways_wPK, file = "my_pathways_wPK.RData")
-pathway_mat_wPK <- matrix(0, 5, 9)
-for (i in 1:4){
-  for (j in 1:9){
-    pathway_mat_wPK[i, j] <- length(intersect(my_pathways_wPK[, i], as.character(pathways[, j])))
-  }
-}
-
-plot_df <- data.frame(PK_Status=c("woPK", "woPK", "woPK", "woPK", "woPK", "wPK", "wPK", "wPK", "wPK", "wPK"), 
-                      Method=c("PR", "Katz", "EK", "ER", "CoV", "PR", "Katz", "EK", "ER", "CoV"), 
-                      rbind(pathway_mat_woPK, pathway_mat_wPK))
-
-p1 <- ggplot(data=plot_df, aes(x=Method, y=X1, fill=PK_Status)) +
-  labs(title="INHIBITION OF VOLTAGE GATED \n CD CA2 CHANNELS", x="Ranking Method", y = "Number of Overlap Genes")+
-  theme(axis.title = element_text(size = .5)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_brewer(palette="Paired") + theme_minimal() +
-  scale_fill_manual(values=c("lightgray", "black")) +
-  theme_classic()
-
-p2 <- ggplot(data=plot_df, aes(x=Method, y=X2, fill=PK_Status)) +
-  labs(title="NEURONAL SYSTEM", x="Ranking Method", y = "Number of Overlap Genes")+
-  theme(axis.title = element_text(size = .5)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_brewer(palette="Paired") + theme_minimal() +
-  scale_fill_manual(values=c("lightgray", "black")) +
-  theme_classic()
-
-p3 <- ggplot(data=plot_df, aes(x=Method, y=X3, fill=PK_Status)) +
-  labs(title="POTASSIUM CHANNELS", x="Ranking Method", y = "Number of Overlap Genes")+
-  theme(axis.title = element_text(size = .5)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_brewer(palette="Paired") + theme_minimal() +
-  scale_fill_manual(values=c("lightgray", "black")) +
-  theme_classic()
-
-p4 <- ggplot(data=plot_df, aes(x=Method, y=X4, fill=PK_Status)) +
-  labs(title="TRANSMISSION ACROSS CHEMICAL \n SYNAPSES", x="Ranking Method", y = "Number of Overlap Genes")+
-  theme(axis.title = element_text(size = .5)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_brewer(palette="Paired") + theme_minimal() +
-  scale_fill_manual(values=c("lightgray", "black")) +
-  theme_classic()
-
-p5 <- ggplot(data=plot_df, aes(x=Method, y=X5, fill=PK_Status)) +
-  labs(title="GPCR DOWNSTREAM SIGNALING", x="Ranking Method", y = "Number of Overlap Genes")+
-  theme(axis.title = element_text(size = .5)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_brewer(palette="Paired") + theme_minimal() +
-  scale_fill_manual(values=c("lightgray", "black")) +
-  theme_classic()
-
-p6 <- ggplot(data=plot_df, aes(x=Method, y=X6, fill=PK_Status)) +
-  labs(title="SLC MEDICATED TRANSMEMBRANCE \n TRANSPORT", x="Ranking Method", y = "Number of Overlap Genes")+
-  theme(axis.title = element_text(size = .5)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_brewer(palette="Paired") + theme_minimal() +
-  scale_fill_manual(values=c("lightgray", "black")) +
-  theme_classic()
-
-p7 <- ggplot(data=plot_df, aes(x=Method, y=X7, fill=PK_Status)) +
-  labs(title="NEUROTRANSMITTER RECEPTOR \n BINDING", x="Ranking Method", y = "Number of Overlap Genes")+
-  theme(axis.title = element_text(size = .5)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_brewer(palette="Paired") + theme_minimal() +
-  scale_fill_manual(values=c("lightgray", "black")) +
-  theme_classic()
-
-p8 <- ggplot(data=plot_df, aes(x=Method, y=X8, fill=PK_Status)) +
-  labs(title="RAS ACTIVATION UPON CA2 INFLUX \n THROUGH NMDA RECEPTOR", x="Ranking Method", y = "Number of Overlap Genes")+
-  theme(axis.title = element_text(size = .5)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_brewer(palette="Paired") + theme_minimal() +
-  scale_fill_manual(values=c("lightgray", "black")) +
-  theme_classic()
-
-p9 <- ggplot(data=plot_df, aes(x=Method, y=X9, fill=PK_Status)) +
-  labs(title ="SIGNALLING BY GPCR", x="Ranking Method", y = "Number of Overlap Genes")+
-  theme(plot.title = element_text(size = .2)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  scale_fill_brewer(palette="Paired") + theme_minimal() +
-  scale_fill_manual(values=c("lightgray", "black")) +
-  theme_classic()
-
-gridExtra::grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, nrow = 3, ncol = 3)
-```
 
 ## Classification without prior knowledge
 ### PageRank
@@ -679,46 +464,50 @@ xgb_test <- accuracy(jap_class, jap_xgb_pred)$prop.correct
 ## Accuracy Plots
 ```{r, fig.width=6, fig.height=6}
 PR.Katz_df <- data.frame(
-  Type = factor(c("woPK", "wPK", "woPK", "wPK", "woPK", "wPK", "woPK", "wPK"), levels = c("woPK", "wPK")),
-  Method = factor(c("PageRank", "PageRank", "Katz", "Katz", "PageRank", "PageRank", "Katz", "Katz"), 
-                  levels = c("PageRank", "Katz")),
-  Accuracy = c(pr_wo_train, pr_w_train, k_wo_train, k_w_train, pr_wo_test, pr_w_test, k_wo_test, k_w_test),
-  Status  = c("Cambridge-Train", "Cambridge-Train", "Cambridge-Train", "Cambridge-Train", 
-              "Japan-Test", "Japan-Test", "Japan-Test", "Japan-Test")
+  Data = factor(c("Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test", 
+                  "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test"), levels = c("Cambridge-Train", 
+                                                                                                "Japan-Test")),
+  Method = factor(c("PR", "PR", "Katz", "Katz", "PR", "PR", "Katz", "Katz"), 
+                  levels = c("PR", "Katz")),
+  Accuracy = c(pr_wo_train, pr_wo_test, k_wo_train, k_wo_test, pr_w_train, pr_w_test, k_w_train, k_w_test),
+  Status  = c( "woPK", "woPK", "woPK", "woPK", "wPK", "wPK", "wPK", "wPK")
 )
 
 EK.ER_df <- data.frame(
-  Type = factor(c("woPK", "wPK", "woPK", "wPK", "woPK", "wPK", "woPK", "wPK"), levels = c("woPK", "wPK")),
-  Method = factor(c("Epistasis-Katz", "Epistasis-Katz", "EpistasisRank", "EpistasisRank", 
-                    "Epistasis-Katz", "Epistasis-Katz", "EpistasisRank", "EpistasisRank"), 
-                  levels = c("Epistasis-Katz", "EpistasisRank")),
-  Accuracy = c(ek_wo_train, ek_w_train, er_wo_train, er_w_train, ek_wo_test, ek_w_test, er_wo_test, er_w_test),
-  Status = c("Cambridge-Train", "Cambridge-Train", "Cambridge-Train", "Cambridge-Train",
-             "Japan-Test", "Japan-Test", "Japan-Test", "Japan-Test")
+  Data = factor(c("Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test", 
+                  "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test"), levels = c("Cambridge-Train", 
+                                                                                                "Japan-Test")),
+  Method = factor(c("EK", "EK", "ER", "ER", 
+                    "EK", "EK", "ER", "ER"), 
+                  levels = c("EK", "ER")),
+  Accuracy = c(ek_wo_train, ek_wo_test, er_wo_train, er_wo_test, ek_w_train, ek_w_test, er_w_train, er_w_test),
+  Status = c( "woPK", "woPK", "woPK", "woPK", "wPK", "wPK", "wPK", "wPK")
 )
 
 cov_pec_df <- data.frame(
-  Type = factor(c("woPK", "woPK", "woPK", "woPK")),
+  Data = factor(c("Cambridge-Train", "Cambridge-Train", "Japan-Test", "Japan-Test")),
   Method = factor(c("CoV", "xgb", "CoV", "xgb"), levels = c("CoV", "xgb")),
   Accuracy = c(cov_train, xgb_train, cov_test, xgb_test),
-  Status = c("Cambridge-Train", "Cambridge-Train", "Japan-Test", "Japan-Test")
+  Status = c("woPK", "woPK", "woPK", "woPK")
 )
 
 
-p1 <- ggplot(PR.Katz_df, aes(x = Type, y = Accuracy, group = Method)) +
+p1 <- ggplot(PR.Katz_df, aes(x = Data, y = Accuracy, group = Method)) +
   geom_point() + geom_line(aes(linetype=Method)) +
-  geom_point(data = cov_pec_df, mapping = aes(x = Type, y = Accuracy, shape = Method)) +
+  geom_point(data = cov_pec_df, mapping = aes(x = Data, y = Accuracy, shape = Method)) +
+  scale_shape_manual(values=c(6,5)) +
   scale_linetype_manual(values=c("twodash", "solid"))+
   facet_wrap(~Status) +
-  theme(legend.position="top") +
+  theme(legend.position=c(0.95, 0.5), legend.text=element_text(size=6), legend.title = element_text(size=6)) +
   guides(group = guide_legend(order=1),
          shape = guide_legend(order=2))
-p2 <- ggplot(EK.ER_df, aes(x = Type, y = Accuracy, group = Method)) +
+p2 <- ggplot(EK.ER_df, aes(x = Data, y = Accuracy, group = Method)) +
   geom_point() + geom_line(aes(linetype=Method)) +
-  geom_point(data = cov_pec_df, mapping = aes(x = Type, y = Accuracy, shape = Method)) +
+  geom_point(data = cov_pec_df, mapping = aes(x = Data, y = Accuracy, shape = Method)) +
+  scale_shape_manual(values=c(6,5)) +
   scale_linetype_manual(values=c("twodash", "solid"))+
   facet_wrap(~Status) +
-  theme(legend.position="top") +
+  theme(legend.position=c(0.95, 0.5), legend.text=element_text(size=6), legend.title = element_text(size=6)) +
   guides(group = guide_legend(order=1),
          shape = guide_legend(order=2))
 grid.arrange(p1, p2, nrow = 2)
