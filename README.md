@@ -19,6 +19,24 @@ Author: Saeid Parvandeh and Brett McKinney
     > library(CORElearn)
     > install.packages("xgboost", repos="http://cran.r-project.org")
     > library(xgboost)
+    > install.packages("igraph")
+    > library(igraph)
+    > install.packages("SDMtools")
+    > library(SDMtools)
+    > install_github("insilico/Rinbix")
+    > library(Rinbix)
+    > install.packages("ggplot2")
+    > library(ggplot2)
+    > install.packages("gridExtra")
+    > library(gridExtra)
+    > source("https://bioconductor.org/biocLite.R")
+    > biocLite("GEOquery")
+    > library(GEOquery)
+    > biocLite("Biobase")
+    > library(Biobase)
+    > biocLite("preprocessCore")
+    > library(preprocessCore)
+    
 
 ### How to find vignettes
 You will be able to find two vignettes, pathway.Rmd and classification.Rmd. The first one manifests the steps of creating pathaway enrichment and how prior knowledge improve Reactome Pathways for MDD, and the second shows the classification accuracies where we add prior knowledge. 

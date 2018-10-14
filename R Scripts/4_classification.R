@@ -466,7 +466,7 @@ cov_test_acc <- NULL
 outer_folds <- caret::createFolds(camb_class, 5, list = FALSE)
 # create inner folds
 for (i in 1:5){
-  cov_woPK_inner.features <- NULL
+  cov_inner.features <- NULL
   inner_folds <- caret::createFolds(camb_class[outer_folds!=i], 5, list = TRUE)
   for (j in 1:length(inner_folds)){
     fold_idx <- which(outer_folds != i)[-inner_folds[[j]]] 
@@ -476,7 +476,7 @@ for (i in 1:5){
     camb_expr.fltr_cov <- camb_fltr.expr
     while (ncol(camb_expr.fltr_cov)>200){
       camb_expr.fltr_cov <- t(cov.filter(exprData,threshold = thresh)$fdata)
-      thresh <- thresh-0.001
+      thresh <- thresh-0.0001
     }
     cov_inner.features <- c(cov_inner.features, colnames(camb_expr.fltr_cov))
     cov_features <- c(cov_features, colnames(camb_expr.fltr_cov))
@@ -537,56 +537,36 @@ xgb_test <- accuracy(jap_class, jap_xgb_pred)$prop.correct
 #---- Classification plot ----#
 ###############################
 PR.Katz_df <- data.frame(
-  Data = factor(c("Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test", 
-                  "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test"), levels = c("Cambridge-Train", 
-                                                                                                "Japan-Test")),
-  Method = factor(c("PR", "PR", "Katz", "Katz", "PR", "PR", "Katz", "Katz"), 
-                  levels = c("PR", "Katz")),
-  Accuracy = c(pr_wo_train, pr_wo_test, k_wo_train, k_wo_test, pr_w_train, pr_w_test, k_w_train, k_w_test),
-  Status  = c( "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", 
+  Data = factor(c("Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test",
+                  "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test"), levels = c("Cambridge-Train", "Japan-Test")),
+  Method = factor(c("PR", "PR", "Katz", "Katz", "xgb", "xgb", "PR", "PR", "Katz", "Katz"), levels = c("PR", "Katz", "xgb")),
+  Accuracy = c(pr_wo_train, pr_wo_test, k_wo_train, k_wo_test, xgb_train, xgb_test, pr_w_train, pr_w_test, k_w_train, k_w_test),
+  Status  = c( "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge",
                "Prior Knowledge", "Prior Knowledge", "Prior Knowledge", "Prior Knowledge")
 )
 
 EK.ER_df <- data.frame(
-  Data = factor(c("Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test", 
-                  "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test"), levels = c("Cambridge-Train", 
-                                                                                                "Japan-Test")),
-  Method = factor(c("EK", "EK", "ER", "ER", 
-                    "EK", "EK", "ER", "ER"), 
-                  levels = c("EK", "ER")),
-  Accuracy = c(ek_wo_train, ek_wo_test, er_wo_train, er_wo_test, ek_w_train, ek_w_test, er_w_train, er_w_test),
-  Status = c("no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", 
+  Data = factor(c("Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test",
+                  "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test"), levels = c("Cambridge-Train", "Japan-Test")),
+  Method = factor(c("EK", "EK", "ER", "ER", "xgb", "xgb", "EK", "EK", "ER", "ER"),  levels = c("EK", "ER", "xgb")),
+  Accuracy = c(ek_wo_train, ek_wo_test, er_wo_train, er_wo_test, xgb_train, xgb_test, ek_w_train, ek_w_test, er_w_train, er_w_test),
+  Status = c("no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge",
              "Prior Knowledge", "Prior Knowledge", "Prior Knowledge", "Prior Knowledge")
-)
-
-cov_pec_df <- data.frame(
-  Data = factor(c("Cambridge-Train", "Cambridge-Train", "Japan-Test", "Japan-Test")),
-  Method = factor(c("CoV", "xgb", "CoV", "xgb"), levels = c("CoV", "xgb")),
-  Accuracy = c(cov_train, xgb_train, cov_test, xgb_test),
-  Status = c("no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge")
 )
 
 
 p1 <- ggplot(PR.Katz_df, aes(x = Data, y = Accuracy, group = Method)) +
   ggtitle("Co-expression Networks") + theme(plot.title = element_text(hjust = 0.5)) +
-  geom_point() + geom_line(aes(linetype=Method)) +
-  geom_point(data = cov_pec_df, mapping = aes(x = Data, y = Accuracy, shape = Method)) +
+  geom_point(aes(shape=Method), size = 2) + geom_line(aes(linetype=Method)) +
   theme(axis.title.x=element_blank()) +
-  scale_shape_manual(values=c(6,5)) +
-  scale_linetype_manual(values=c("twodash", "solid"))+
+  scale_linetype_manual(values=c("twodash", "solid", "dashed"))+
   facet_wrap(~Status) +
-  theme(legend.position=c(0.95, 0.5), legend.text=element_text(size=6), legend.title = element_text(size=6)) +
-  guides(group = guide_legend(order=1),
-         shape = guide_legend(order=2))
+  theme(legend.position=c(0.95, 0.5), legend.text=element_text(size=6), legend.title = element_text(size=6))
 p2 <- ggplot(EK.ER_df, aes(x = Data, y = Accuracy, group = Method)) +
   ggtitle("Epistasis Networks") + theme(plot.title = element_text(hjust = 0.5)) +
-  geom_point() + geom_line(aes(linetype=Method)) +
-  geom_point(data = cov_pec_df, mapping = aes(x = Data, y = Accuracy, shape = Method)) +
+  geom_point(aes(shape=Method), size = 2) + geom_line(aes(linetype=Method)) +
   theme(axis.title.x=element_blank()) +
-  scale_shape_manual(values=c(6,5)) +
-  scale_linetype_manual(values=c("twodash", "solid"))+
+  scale_linetype_manual(values=c("twodash", "solid" ,"dashed"))+
   facet_wrap(~Status) +
-  theme(legend.position=c(0.95, 0.5), legend.text=element_text(size=6), legend.title = element_text(size=6)) +
-  guides(group = guide_legend(order=1),
-         shape = guide_legend(order=2))
+  theme(legend.position=c(0.95, 0.5), legend.text=element_text(size=6), legend.title = element_text(size=6))
 grid.arrange(p1, p2, nrow = 2)

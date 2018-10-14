@@ -21,22 +21,216 @@ library(caret)
 library(xgboost)
 library(gridExtra)
 library(privateEC)
+# read data using read.ilmn function
+library(GEOquery)
+library(Biobase)
+library(preprocessCore)
+source("helper_functions.R")
+source("impquery-functions.R")
 ```
 
-### Loading required data
+### Loading data from GEO website
 ```{r}
-source("helper_functions.R")
-# load MDD microarray data
-load("camb_fltr.expr.RData")
-load("camb_sub_class.RData")
-load("jap_fltr.expr.RData")
-load("jap_class.RData")
+# get data from GEO
+Elist <- getGEO("GSE98793")
 
-# load reGAIN and IMP query network
-load("camb_reGAIN.RData")
-load("jap_reGAIN.RData")
+# Elicit gene expression
+expr <- exprs(Elist[[1]])
+# Elicit the titles (MDD and CON)
+titles <- pData(Elist[[1]])[, 1]
+# assign the status labels
+camb_class <- ifelse(grepl("control", titles), 0, 1)
+# Making sure that probIDs and rownames are identical
+probID <- Elist$GSE98793_series_matrix.txt.gz@featureData@data$ID
+identical(as.character(probID), rownames(expr))
+# Substitute probID with gene symboles
+gene.symbol <- Elist$GSE98793_series_matrix.txt.gz@featureData@data$`Gene Symbol`
+rownames(expr) <- gene.symbol
+expr <- expr[-which(rownames(expr)==""), ]
+
+# z-transformation on control samples
+ctrl_idx <- which(camb_class==0)
+ctrl_expr <- expr[, ctrl_idx]
+z.trans_mat <- matrix(0,nrow = nrow(expr),ncol=ncol(expr))
+for (i in 1:nrow(ctrl_expr)){
+  z.trans_mat[i, ] <- pnorm(as.numeric(expr[i, ]),
+                            mean(as.numeric(ctrl_expr[i, ])),
+                            sd(as.numeric(ctrl_expr[i, ])))
+}
+
+camb_expr <- t(z.trans_mat)
+colnames(camb_expr) <- rownames(expr)
+rownames(camb_expr) <- colnames(expr)
+
+save(camb_expr, file = "camb_expr.RData")
+save(camb_class, file = "camb_class.RData")
+
+# get data from GEO
+Elist <- getGEO("GSE76826")
+
+# Elicit gene expression
+expr <- exprs(Elist[[1]])
+# Elicit the titles (MDD and HC)
+titles <- pData(Elist[[1]])[, 1]
+# assign the status labels
+jap_class <- ifelse(grepl("HC", titles), 0, 1)
+# Making sure that probIDs and rownames are identical
+probID <- Elist$GSE76826_series_matrix.txt.gz@featureData@data$ID
+identical(as.character(probID), rownames(expr))
+# Substitute probID with gene symboles
+gene.symbol <- Elist$GSE76826_series_matrix.txt.gz@featureData@data$GENE_SYMBOL
+rownames(expr) <- gene.symbol
+expr <- expr[-which(rownames(expr)==""), ]
+
+# z-transform in control samples
+ctrl_idx <- which(jap_class==0)
+ctrl_expr <- expr[, ctrl_idx]
+z.trans_mat <- matrix(0,nrow = nrow(expr),ncol=ncol(expr))
+for (i in 1:nrow(ctrl_expr)){
+  z.trans_mat[i, ] <- pnorm(as.numeric(expr[i, ]),
+                            mean(as.numeric(ctrl_expr[i, ])),
+                            sd(as.numeric(ctrl_expr[i, ])))
+}
+
+jap_expr <- t(z.trans_mat)
+colnames(jap_expr) <- rownames(expr)
+rownames(jap_expr) <- colnames(expr)
+
+save(jap_expr, file = "jap_expr.RData")
+save(jap_class, file = "jap_class.RData")
+```
+
+### Subsampling
+```{r}
+# balance the number of case/control subjects.
+case_idx <- which(camb_class==1)
+set.seed(123)
+half_case_idx <- sample(case_idx, length(case_idx)/2)
+camb_class <- camb_class[-half_case_idx]
+camb_expr <- camb_expr[-half_case_idx, ]
+save(camb_expr, file = "camb_expr_equalized.RData")
+save(camb_class, file = "camb_class_equalized.RData")
+
+# subsample the Cambridge data to the size of Japan data
+# case
+case_idx <- which(camb_class==1)
+set.seed(456)
+subsample_case_idx <- sample(case_idx, length(case_idx)-44)
+# control
+control_idx <- which(camb_class==0)
+subsample_control_idx <- sample(control_idx, length(control_idx)-44)
+camb_class <- camb_class[c(subsample_control_idx, subsample_case_idx)]
+save(camb_class, file = "camb_sub_class.RData")
+camb_expr <- camb_expr[c(subsample_control_idx,subsample_case_idx), ]
+save(camb_expr, file = "camb_sub_expr.RData")
+```
+
+
+### Filter noisy genes using coefficient of variation
+```{r}
+# Coefficient of Variation (CoV) filtering -- Cambridge, Japan
+exprData1 <- t(camb_expr)
+camb_expr.fltr_cov <- data.frame(t(cov.filter(exprData1,.559095)$fdata)) 
+dim(camb_expr.fltr_cov)
+
+exprData2 <- t(jap_expr)
+jap_expr.fltr_cov <- data.frame(t(cov.filter(exprData2,.559095)$fdata)) 
+dim(jap_expr.fltr_cov)
+
+camb_genes <- as.character(colnames(camb_expr.fltr_cov))
+jap_genes <- as.character(colnames(jap_expr.fltr_cov))
+
+common_genes <- intersect(camb_genes, jap_genes)
+length(common_genes)
+camb_fltr.expr <- camb_expr.fltr_cov[, which(camb_genes %in% common_genes)]
+camb_fltr.expr <- camb_fltr.expr[, order(colnames(camb_fltr.expr))]
+dim(camb_fltr.expr)
+save(camb_fltr.expr, file = "camb_fltr.expr.RData")
+jap_fltr.expr <- jap_expr.fltr_cov[, which(jap_genes %in% common_genes)]
+jap_fltr.expr <- jap_fltr.expr[, order(colnames(jap_fltr.expr))]
+dim(jap_fltr.expr)
+save(jap_fltr.expr, file = "jap_fltr.expr.RData")
+```
+
+### Computing the IMP query network
+```{r}
+# wirte all genes in a file
+write.matrix(colnames(camb_fltr.expr), file = "top5000uniq-genes.txt", sep = "\t")
+geneListFile <- "top5000uniq-genes.txt"
+outPrefix <-    "top5000uniq-genes"
+
+cat("Gene list file:      ", geneListFile, "\n", sep = "\t")
+cat("Confidence threshold:", confidenceThreshold, "\n", sep = "\t")
+cat("Target network size: ", targetListSize, "\n", sep = "\t")
+cat("Output prefix:       ", outPrefix, "\n", sep = "\t")
+
+# read the list of input genes
+cat("Reading gene list (network node) file\n")
+geneListTable <- read.table(geneListFile, header = FALSE, sep = "\t",
+                            stringsAsFactors = FALSE)
+numInputGenes <- nrow(geneListTable)
+inputGeneList <- as.character(geneListTable[, 1])
+# TODO: lists with main effects would have have scores here in column 2
+inputScoresList <- rep.int(x = 0, times = numInputGenes)
+cat(length(inputGeneList), " genes read \n")
+
+# connect to the MySQL database
+cat("Opening a connection to the database\n")
+cursorImpDatabase <- RMariaDB::dbConnect(MariaDB(),
+                                         user = "anonymous",
+                                         password = "s3cr3t",
+                                         dbname = "imp",
+                                         host = "127.0.0.1")
+
+# create the interactions matrix, optionally expanding the list first with IMP interactions
+cat("Building the matrix from database queries\n")
+hasMainEffects <- FALSE
+isRankedList <- FALSE
+outSifFilename <- paste(outPrefix, ".sif", sep = "")
+VERBOSE_FLAG <- FALSE
+confidenceThreshold <- 0  # confidence range 0.0 to 1.0
+targetListSize = 0 # use only original list
+matrixGeneList = fillRegain(cursorImp = cursorImpDatabase,
+                            geneList = inputGeneList,
+                            scoreList = inputScoresList,
+                            hasMainEffectScores = hasMainEffects,
+                            ranked = isRankedList,
+                            confidenceThreshold = confidenceThreshold,
+                            addMode = FALSE,
+                            sifFilename = outSifFilename,
+                            verbose = VERBOSE_FLAG)
+
+# write output files
+# matrix
+outFilename <- paste(outPrefix, ".adjmat", sep = "")
+cat("Saving", outFilename, "\n")
+colnames(matrixGeneList$filledMatrix) <- matrixGeneList$filledGeneList
+write.table(matrixGeneList$filledMatrix, file = outFilename, sep = "\t",
+            col.names = TRUE, row.names = FALSE, quote = FALSE)
+
+impNetwork <- as.matrix(read.table("top5000uniq-genes.adjmat", header = TRUE, sep = "\t"))
+# replace all real values with 1, so that we will have a binary matrix
+impNetwork[impNetwork > 0] <- 1
+impNetwork <- matrix(as.integer(impNetwork), nrow = 5000)
+rownames(impNetwork) <- colnames(camb_fltr.expr)
+colnames(impNetwork) <- colnames(camb_fltr.expr)
+save(impNetwork, file = "impNetwork.RData")
+
 load("impNetwork.RData")
 ```
+
+### Computing the reGAIN matrix
+```{r}
+# Cambridge
+camb_data <- data.frame(camb_fltr.expr, class = camb_class)
+camb_reGAIN <- Rinbix::regainInbix(camb_data)$reGAIN
+save(camb_reGAIN, file = "camb_reGAIN.RData")
+# Japan
+jap_data <- data.frame(jap_fltr.expr, class = jap_class)
+jap_reGAIN <- Rinbix::regainInbix(jap_data)$reGAIN
+save(jap_reGAIN, file = "jap_reGAIN.RData")
+```
+
 
 ### Centrality methods without prior knowledge
 #### PageRank
@@ -93,11 +287,15 @@ top_camb_cov <- t(cov.filter(exprData,.4874)$fdata) # 200 genes
 ```
 
 ### Centrality method with prior knowledge
-#### PageRank
+#### Create prior knowledge network
 ```{r}
 # prior knowledge
 impgraph <- graph_from_adjacency_matrix(impNetwork, mode = "undirected", diag = TRUE, add.rownames = NA)
 IMP_deg <- degree(impgraph, normalized = TRUE, loops = FALSE)
+```
+
+#### PageRank
+```{r}
 camb_page_wPK <- as.numeric(my.pagerank(camb_Adj, IMP_deg))
 names(camb_page_wPK) <- rownames(camb_Adj) 
 camb_page_wPK.sort <- sort(camb_page_wPK, T)
