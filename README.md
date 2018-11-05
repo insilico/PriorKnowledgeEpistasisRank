@@ -1,6 +1,7 @@
 # PriorKnowledgeEpistasisRank
-Epistasis network centralities that incorporate prior knowledge<p>
-Author: Saeid Parvandeh and Brett McKinney
+EpistasisRank and EpistasisKatz: Co-expression and epistasis-expression network centralities that incorporate prior knowledge
+
+Authors: Saeid Parvandeh and Brett McKinney
 
 ### How to install required packages
 [Install Script](https://github.com/insilico/PriorKnowledgeEpistasisRank/blob/master/R%20Scripts/install_dependencies.R)
