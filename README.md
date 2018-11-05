@@ -1,9 +1,9 @@
 # PriorKnowledgeEpistasisRank
-Epistasis network centralities that incorporate prior knowledge
+Epistasis network centralities that incorporate prior knowledge<p>
 Author: Saeid Parvandeh and Brett McKinney
 
 ### How to install required packages
-[https://github.com/insilico/PriorKnowledgeEpistasisRank/blob/master/R%20Scripts/install_dependencies.R](Install Script)
+[Install Script](https://github.com/insilico/PriorKnowledgeEpistasisRank/blob/master/R%20Scripts/install_dependencies.R)
     
 ### How to find vignettes
 There are two vignettes, pathway.Rmd and classification.Rmd. The first one shows the steps of creating pathaway enrichment and how prior knowledge improves Reactome Pathway enrichment for MDD, and the second shows the effect on nested-CV classification accuracies of gene-wise prior knowledge in network centrality algorithms. 
