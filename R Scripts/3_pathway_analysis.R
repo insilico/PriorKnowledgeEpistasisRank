@@ -42,7 +42,7 @@ diag(camb_Adj) <- 0
 # Adjacency matrix to graph
 camb_Adj_g <- graph.adjacency(camb_Adj)
 # page_woPKRank centrality
-camb_page_woPK <- page.rank(camb_Adj_g)$vector
+camb_page_woPK <- Rinbix::PageRank(camb_Adj_g)$vector
 camb_page_woPK.sort <- sort(camb_page_woPK, T)
 top_camb_page_woPK <- camb_page_woPK.sort[1:200]
 
@@ -53,7 +53,7 @@ top_camb_page_woPK <- camb_page_woPK.sort[1:200]
 a <- eigen(camb_Adj)
 beta <- rep(1, nrow(camb_Adj))/nrow(camb_Adj)
 alpha <- 1/max(a$values) - (1/max(a$values))/100
-camb_katz_woPK <- katz.centrality(camb_Adj, alpha, beta)
+camb_katz_woPK <- Rinbix::EpistasisKatz(camb_Adj, alpha, beta)
 names(camb_katz_woPK) <- colnames(camb_Adj)
 camb_katz_woPK.sort <- sort(camb_katz_woPK, T)
 top_camb_katz_woPK <- camb_katz_woPK.sort[1:200]
@@ -65,7 +65,7 @@ alpha = 1/mean(colSums(camb_reGAIN))
 beta = diag(camb_reGAIN)
 camb_regain.Katz <- camb_reGAIN
 diag(camb_regain.Katz) <- 0
-camb_EK_woPK <- katz.centrality(camb_regain.Katz, alpha, beta)
+camb_EK_woPK <- Rinbix::EpistasisKatz(camb_regain.Katz, alpha, beta)
 names(camb_EK_woPK) <- rownames(camb_reGAIN) 
 camb_EK_woPK.sort <- sort(camb_EK_woPK, T)
 top_camb_EK_woPK <- camb_EK_woPK.sort[1:200]
@@ -73,14 +73,14 @@ top_camb_EK_woPK <- camb_EK_woPK.sort[1:200]
 # --------------------------------------------------
 # reGAIN+EpistasisRank w/o prior knowledge
 # --------------------------------------------------
-camb_ER_woPK <- EpistasisRank(camb_reGAIN, Gamma_vec = .85)
+camb_ER_woPK <- Rinbix::EpistasisRank(camb_reGAIN, Gamma_vec = .85)
 top_camb_ER_woPK <- camb_ER_woPK[1:200, ]
 
 # --------------------------------------------------
 # Using CoV filtering
 # --------------------------------------------------
 exprData <- t(camb_fltr.expr)
-top_camb_cov <- t(cov.filter(exprData,.4874)$fdata) # 200 genes (sub = , ori = .4874)
+top_camb_cov <- t(Rinbix::geneLowCoefOfVarFilter(exprData,.4874)$fdata) # 200 genes (sub = , ori = .4874)
 dim(top_camb_cov)
 
 # ----------------------------------------------------
@@ -96,7 +96,7 @@ diag(camb_Adj) <- 0
 camb_Adj_g <- graph.adjacency(camb_Adj)
 # page_wPKRank centrality
 # page_wPKRank centrality
-camb_page_wPK <- as.numeric(my.pagerank(camb_Adj, IMP_deg))
+camb_page_wPK <- as.numeric(Rinbix::PageRank(camb_Adj, IMP_deg))
 names(camb_page_wPK) <- rownames(camb_Adj) 
 camb_page_wPK.sort <- sort(camb_page_wPK, T)
 top_camb_page_wPK <- camb_page_wPK.sort[1:200]
@@ -107,7 +107,7 @@ top_camb_page_wPK <- camb_page_wPK.sort[1:200]
 a <- eigen(camb_Adj)
 1/max(a$values)
 alpha <- 1/max(a$values) - (1/max(a$values))/100
-camb_katz_wPK <- katz.centrality(camb_Adj, alpha, beta = IMP_deg)
+camb_katz_wPK <- Rinbix::EpistasisKatz(camb_Adj, alpha, beta = IMP_deg)
 names(camb_katz_wPK) <- rownames(camb_Adj) 
 camb_katz_wPK.sort <- sort(camb_katz_wPK, T)
 top_camb_katz_wPK <- camb_katz_wPK.sort[1:200]
@@ -118,7 +118,7 @@ top_camb_katz_wPK <- camb_katz_wPK.sort[1:200]
 beta <- diag(camb_reGAIN)
 camb_regain.Katz <- camb_reGAIN
 diag(camb_regain.Katz) <- 0
-camb_EK_wPK <- katz.centrality(camb_regain.Katz, IMP_deg, beta)
+camb_EK_wPK <- Rinbix::EpistasisKatz(camb_regain.Katz, IMP_deg, beta)
 names(camb_EK_wPK) <- rownames(camb_Adj) 
 camb_EK_wPK.sort <- sort(camb_EK_wPK, T)
 top_camb_EK_wPK <- camb_EK_wPK.sort[1:200]
@@ -126,7 +126,7 @@ top_camb_EK_wPK <- camb_EK_wPK.sort[1:200]
 # --------------------------------------------------
 # reGAIN+EpistasisRank w/prior knowledge
 # --------------------------------------------------
-camb_ER_wPK <- EpistasisRank(camb_reGAIN, IMP_deg)
+camb_ER_wPK <- Rinbix::EpistasisRank(camb_reGAIN, IMP_deg)
 top_camb_ER_wPK <- camb_ER_wPK[1:200, ]
 
 ####################################
@@ -246,7 +246,7 @@ diag(jap_Adj) <- 0
 # Adjacency matrix to graph
 jap_Adj_g <- graph.adjacency(jap_Adj)
 
-jap_page_woPK <- page.rank(jap_Adj_g)$vector
+jap_page_woPK <- Rinbix::PageRank(jap_Adj_g)$vector
 jap_page_woPK.sort <- sort(jap_page_woPK, T)
 top_jap_page_woPK <- jap_page_woPK.sort[1:200]
 
@@ -256,7 +256,7 @@ top_jap_page_woPK <- jap_page_woPK.sort[1:200]
 a <- eigen(jap_Adj)
 alpha <- 1/max(a$values) - (1/max(a$values))/100
 beta <- rep(1, nrow(jap_Adj))/nrow(jap_Adj)
-jap_katz_woPK <- katz.centrality(jap_Adj, alpha, beta)
+jap_katz_woPK <- Rinbix::EpistasisKatz(jap_Adj, alpha, beta)
 names(jap_katz_woPK) <- colnames(jap_Adj)
 jap_katz_woPK.sort <- sort(jap_katz_woPK, T)
 top_jap_katz_woPK <- jap_katz_woPK.sort[1:200]
@@ -268,7 +268,7 @@ a = 1/mean(colSums(jap_reGAIN))
 beta = diag(jap_reGAIN)
 jap_regain.Katz <- jap_reGAIN
 diag(jap_regain.Katz) <- 0
-jap_EK_woPK <- katz.centrality(jap_regain.Katz, a, beta)
+jap_EK_woPK <- Rinbix::EpistasisKatz(jap_regain.Katz, a, beta)
 names(jap_EK_woPK) <- rownames(jap_reGAIN) 
 jap_EK_woPK.sort <- sort(jap_EK_woPK, T)
 top_jap_EK_woPK <- jap_EK_woPK.sort[1:200]
@@ -276,20 +276,20 @@ top_jap_EK_woPK <- jap_EK_woPK.sort[1:200]
 # --------------------------------------------------
 # reGAIN+EpistasisRank w/o prior knowledge
 # --------------------------------------------------
-jap_ER_woPK <- EpistasisRank(jap_reGAIN, Gamma_vec = .85)
+jap_ER_woPK <- Rinbix::EpistasisRank(jap_reGAIN, Gamma_vec = .85)
 top_jap_ER_woPK <- jap_ER_woPK[1:200, ]
 
 # --------------------------------------------------
 # Using CoV filtering
 # --------------------------------------------------
 exprData <- t(jap_fltr.expr)
-jap_expr.fltr_cov <- t(cov.filter(exprData,.3795)$fdata) # 200 genes
+jap_expr.fltr_cov <- t(Rinbix::geneLowCoefOfVarFilter(exprData,.3795)$fdata) # 200 genes
 dim(jap_expr.fltr_cov)
 
 # ----------------------------------------------------
 # co-expre+PageRank w/prior knowledge
 # ----------------------------------------------------
-jap_page_wPK <- as.numeric(my.pagerank(jap_Adj, IMP_deg))
+jap_page_wPK <- as.numeric(Rinbix::PageRank(jap_Adj, IMP_deg))
 names(jap_page_wPK) <- rownames(jap_Adj) 
 jap_page_wPK.sort <- sort(jap_page_wPK, T)
 top_jap_page_wPK <- jap_page_wPK.sort[1:200]
@@ -299,7 +299,7 @@ top_jap_page_wPK <- jap_page_wPK.sort[1:200]
 # ----------------------------------------------------
 a <- eigen(jap_Adj)
 alpha <- 1/max(a$values) - (1/max(a$values))/100
-jap_katz_wPK <- katz.centrality(jap_Adj, alpha, beta = IMP_deg)
+jap_katz_wPK <- Rinbix::EpistasisKatz(jap_Adj, alpha, beta = IMP_deg)
 names(jap_katz_wPK) <- rownames(jap_Adj) 
 jap_katz_wPK.sort <- sort(jap_katz_wPK, T)
 top_jap_katz_wPK <- jap_katz_wPK.sort[1:200]
@@ -310,7 +310,7 @@ top_jap_katz_wPK <- jap_katz_wPK.sort[1:200]
 beta = diag(jap_reGAIN)
 jap_regain.Katz <- jap_reGAIN
 diag(jap_regain.Katz) <- 0
-jap_EK_wPK <- katz.centrality(jap_regain.Katz, IMP_deg, beta)
+jap_EK_wPK <- Rinbix::EpistasisKatz(jap_regain.Katz, IMP_deg, beta)
 names(jap_EK_wPK) <- rownames(jap_reGAIN) 
 jap_EK_wPK.sort <- sort(jap_EK_wPK, T)
 top_jap_EK_wPK <- jap_EK_wPK.sort[1:200]
@@ -318,7 +318,7 @@ top_jap_EK_wPK <- jap_EK_wPK.sort[1:200]
 # --------------------------------------------------
 # reGAIN+EpistasisRank w/prior knowledge
 # --------------------------------------------------
-jap_ER_wPK <- EpistasisRank(jap_reGAIN, IMP_deg)
+jap_ER_wPK <- Rinbix::EpistasisRank(jap_reGAIN, IMP_deg)
 top_jap_ER_wPK <- jap_ER_wPK[1:200,]
 
 

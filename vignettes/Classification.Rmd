@@ -42,7 +42,7 @@ for (i in 1:5){
     # Adjacency matrix to graph
     camb_Adj_g <- graph.adjacency(camb_Adj_partial)
     # page_woPKRank centrality
-    camb_page_woPK <- page.rank(camb_Adj_g)$vector
+    camb_page_woPK <- Rinbix::PageRank(camb_Adj_g)$vector
     camb_page_woPK.sort <- sort(camb_page_woPK, T)
     top_camb_page_woPK <- camb_page_woPK.sort[1:200]
     page_woPK_inner.features <- c(page_woPK_inner.features, top_camb_page_woPK)
@@ -91,7 +91,7 @@ for (i in 1:5){
     a <- eigen(camb_Adj_partial)
     alpha = signif(1/max(a$values), digits = 2)
     beta <- rep(1, nrow(camb_Adj_partial))/nrow(camb_Adj_partial)
-    camb_katz_woPK <- katz.centrality(camb_Adj_partial, alpha, beta)
+    camb_katz_woPK <- Rinbix::EpistasisKatz(camb_Adj_partial, alpha, beta)
     names(camb_katz_woPK) <- colnames(camb_Adj_partial)
     camb_katz_woPK.sort <- sort(camb_katz_woPK, T)
     top_camb_katz_woPK <- camb_katz_woPK.sort[1:200]
@@ -140,7 +140,7 @@ for (i in 1:5){
     alpha = 1/mean(colSums(camb_Regain$reGAIN))
     beta = diag(camb_Regain$reGAIN)
     diag(camb_Regain$reGAIN) <- 0
-    camb_ekatz_woPK <- katz.centrality(camb_Regain$reGAIN, alpha, beta)
+    camb_ekatz_woPK <- Rinbix::EpistasisKatz(camb_Regain$reGAIN, alpha, beta)
     names(camb_ekatz_woPK) <- colnames(camb_Regain$reGAIN)
     camb_ekatz_woPK.sort <- sort(camb_ekatz_woPK, T)
     top_camb_ekatz_woPK <- camb_ekatz_woPK.sort[1:200]
@@ -232,7 +232,7 @@ for (i in 1:5){
     # Adjacency matrix to graph
     camb_Adj_g <- graph.adjacency(camb_Adj_partial)
     # page_wPKRank centrality
-    camb_page_wPK <- as.numeric(my.pagerank(camb_Adj_partial, IMP_deg))
+    camb_page_wPK <- as.numeric(Rinbix::PageRank(camb_Adj_partial, IMP_deg))
     names(camb_page_wPK) <- rownames(camb_Adj_partial)
     camb_page_wPK.sort <- sort(camb_page_wPK, T)
     top_camb_page_wPK <- camb_page_wPK.sort[1:200]
@@ -279,7 +279,7 @@ for (i in 1:5){
     # katz_wPK centrality
     a <- eigen(camb_Adj_partial)
     alpha <- signif(1/max(a$values), digits = 2)
-    camb_katz_wPK <- katz.centrality(camb_Adj_partial, alpha, beta = IMP_deg)
+    camb_katz_wPK <- Rinbix::EpistasisKatz(camb_Adj_partial, alpha, beta = IMP_deg)
     names(camb_katz_wPK) <- rownames(camb_Adj_partial)
     camb_katz_wPK.sort <- sort(camb_katz_wPK, T)
     top_camb_katz_wPK <- camb_katz_wPK.sort[1:200]
@@ -327,7 +327,7 @@ for (i in 1:5){
     # ekatz_wPK centrality
     beta <- diag(camb_Regain$reGAIN)
     diag(camb_Regain$reGAIN) <- 0
-    camb_ekatz_wPK <- katz.centrality(camb_Regain$reGAIN, IMP_deg, beta)
+    camb_ekatz_wPK <- Rinbix::EpistasisKatz(camb_Regain$reGAIN, IMP_deg, beta)
     names(camb_ekatz_wPK) <- colnames(camb_expr)
     camb_ekatz_wPK.sort <- sort(camb_ekatz_wPK, T)
     top_camb_ekatz_wPK <- camb_ekatz_wPK.sort[1:200]
@@ -373,7 +373,7 @@ for (i in 1:5){
     rownames(regain_matrix) <- NULL
     camb_Regain <- Rinbix::regainInbix(regain_matrix)
     # ER_wPKrank centrality
-    camb_ER_wPKrank <- EpistasisRank(camb_Regain$reGAIN, IMP_deg)
+    camb_ER_wPKrank <- Rinbix::EpistasisRank(camb_Regain$reGAIN, IMP_deg)
     top_camb_ER_wPK <- camb_ER_wPKrank[1:200,]
     ER_wPK_inner.features <- c(ER_wPK_inner.features, as.character(top_camb_ER_wPK$gene))
     ER_wPK_features <- c(ER_wPK_features, as.character(top_camb_ER_wPK$gene))
@@ -428,8 +428,8 @@ PR.Katz_df <- data.frame(
 EK.ER_df <- data.frame(
   Data = factor(c("Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test",
                   "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test"), levels = c("Cambridge-Train", "Japan-Test")),
-  Method = factor(c("EK", "EK", "ER", "ER", "xgb", "xgb", "EK", "EK", "ER", "ER"),  levels = c("EK", "ER", "xgb")),
-  Accuracy = c(ek_wo_train, ek_wo_test, er_wo_train, er_wo_test, xgb_train, xgb_test, ek_w_train, ek_w_test, er_w_train, er_w_test),
+  Method = factor(c("ER", "ER", "EK", "EK", "xgb", "xgb", "ER", "ER", "EK", "EK"),  levels = c("ER", "EK", "xgb")),
+  Accuracy = c(er_wo_train, er_wo_test, ek_wo_train, ek_wo_test, xgb_train, xgb_test, er_w_train, er_w_test, ek_w_train, ek_w_test),
   Status = c("no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge",
              "Prior Knowledge", "Prior Knowledge", "Prior Knowledge", "Prior Knowledge")
 )

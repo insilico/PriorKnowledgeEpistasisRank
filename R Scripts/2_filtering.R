@@ -54,11 +54,11 @@ table(camb_class)
 
 # Coefficient of Variation (CoV) filtering -- Cambridge, Japan
 exprData1 <- t(camb_expr)
-camb_expr.fltr_cov <- data.frame(t(cov.filter(exprData1,.559095)$fdata)) 
+camb_expr.fltr_cov <- data.frame(t(Rinbix::geneLowCoefOfVarFilter(exprData1,.559095)$fdata)) 
 dim(camb_expr.fltr_cov)
 
 exprData2 <- t(jap_expr)
-jap_expr.fltr_cov <- data.frame(t(cov.filter(exprData2,.559095)$fdata)) 
+jap_expr.fltr_cov <- data.frame(t(Rinbix::geneLowCoefOfVarFilter(exprData2,.559095)$fdata)) 
 dim(jap_expr.fltr_cov)
 
 camb_genes <- as.character(colnames(camb_expr.fltr_cov))

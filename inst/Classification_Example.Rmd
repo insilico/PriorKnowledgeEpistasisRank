@@ -16,86 +16,44 @@ knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
 
 ### Install required packages
 ```{r results='hide', message=FALSE, warning=FALSE}
-if (!("gdata" %in% installed.packages()[,"Package"])){
-  install.packages("gdata", repos = "http://cran.us.r-project.org", dependencies = TRUE)
+check.packages <- function(pkg){
+  # check.packages function: install and load multiple R packages.
+  # Check to see if packages are installed. Install them if they are not, 
+  # then load them into the R session.
+  # https://gist.github.com/smithdanielle/9913897
+  
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+    install.packages(new.pkg, repos = "http://cran.us.r-project.org", dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
 }
-library(gdata)
 
-if (!("devtools" %in% installed.packages()[,"Package"])){
-  install.packages("devtools", repos = "http://cran.us.r-project.org", dependencies = TRUE)
-}
-library(devtools)
 
 if (!("privateEC" %in% installed.packages()[,"Package"])){
   devtools::install_github("insilico/privateEC", build_vignettes = TRUE)
 }
 library(privateEC)
 
-if (!("lattice" %in% installed.packages()[,"Package"])){
-  install.packages("lattice", repos = "http://cran.us.r-project.org", dependencies = TRUE)
+if (!("devtools" %in% installed.packages()[,"Package"])){
+  install.packages("devtools", repos = "http://cran.us.r-project.org", dependencies = TRUE)
 }
-library(lattice)
+library(devtools)
 
-if (!("caret" %in% installed.packages()[,"Package"])){
-  install.packages("caret", repos = "http://cran.us.r-project.org", dependencies = TRUE)
-}
-library(caret)
-
-if (!("glmnet" %in% installed.packages()[,"Package"])){
-  install.packages("glmnet", repos = "http://cran.us.r-project.org", dependencies = TRUE)
-}
-library(glmnet)
-
-if (!("CORElearn" %in% installed.packages()[,"Package"])){
-  install.packages("CORElearn", repos = "http://cran.us.r-project.org", dependencies = TRUE)
-}
-library(CORElearn)
-
-if (!("xgboost" %in% installed.packages()[,"Package"])){
-  install.packages("xgboost", repos = "http://cran.us.r-project.org", dependencies = TRUE)
-}
-library(xgboost)
-
-if (!("igraph" %in% installed.packages()[,"Package"])){
-  install.packages("igraph", repos = "http://cran.us.r-project.org", dependencies = TRUE)
-}
-library(igraph)
-
-if (!("SDMTools" %in% installed.packages()[,"Package"])){
-  install.packages("SDMTools", repos = "http://cran.us.r-project.org", dependencies = TRUE)
-}
-library(SDMTools)
-
+# install github package
 if (!("Rinbix" %in% installed.packages()[,"Package"])){
   devtools::install_github("insilico/Rinbix", build_vignettes = TRUE)
 }
-library(Rinbix)
 
+# install cran packages
+packages <- c("ggplot2", "CORElearn", "gridExtra", "lattice", "caret", "glmnet", "xgboost", "igraph",
+              "gdata", "SDMTools", "RMariaDB")
 
-if (!("ggplot2" %in% installed.packages()[,"Package"])){
-  install.packages("ggplot2", repos = "http://cran.us.r-project.org", dependencies = TRUE)
-}
-library(ggplot2)
+# # install bioconductor packages
+# source("https://bioconductor.org/biocLite.R")
+# biocLite("GEOquery")
+# biocLite("Biobase")
+# biocLite("preprocessCore")
 
-
-if (!("gridExtra" %in% installed.packages()[,"Package"])){
-  install.packages("gridExtra", repos = "http://cran.us.r-project.org", dependencies = TRUE)
-}
-library(gridExtra)
-
-if (!("RMariaDB" %in% installed.packages()[,"Package"])){
-  install.packages("RMariaDB", repos = "http://cran.us.r-project.org", dependencies = TRUE)
-}
-library(RMariaDB)
-
-source("https://bioconductor.org/biocLite.R")
-biocLite("GEOquery")
-library(GEOquery)
-biocLite("Biobase")
-library(Biobase)
-biocLite("preprocessCore")
-library(preprocessCore)
-source("helper_functions.R")
 source("impquery-functions.R")
 ```
 
@@ -204,11 +162,11 @@ load("camb_sub_expr.RData")
 ```{r}
 # # Coefficient of Variation (CoV) filtering -- Cambridge, Japan
 # exprData1 <- t(camb_expr)
-# camb_expr.fltr_cov <- data.frame(t(cov.filter(exprData1,.559095)$fdata)) 
+# camb_expr.fltr_cov <- data.frame(t(Rinbix::geneLowCoefOfVarFilter(exprData1,.559095)$fdata)) 
 # dim(camb_expr.fltr_cov)
 # 
 # exprData2 <- t(jap_expr)
-# jap_expr.fltr_cov <- data.frame(t(cov.filter(exprData2,.559095)$fdata)) 
+# jap_expr.fltr_cov <- data.frame(t(Rinbix::geneLowCoefOfVarFilter(exprData2,.559095)$fdata)) 
 # dim(jap_expr.fltr_cov)
 # 
 # camb_genes <- as.character(colnames(camb_expr.fltr_cov))
@@ -298,8 +256,8 @@ load("impNetwork.RData")
 #### Create prior knowledge network
 ```{r}
 # prior knowledge
-impgraph <- graph_from_adjacency_matrix(impNetwork, mode = "undirected", diag = TRUE, add.rownames = NA)
-IMP_deg <- degree(impgraph, normalized = TRUE, loops = FALSE)
+impgraph <- igraph::graph_from_adjacency_matrix(impNetwork, mode = "undirected", diag = TRUE, add.rownames = NA)
+IMP_deg <- igraph::degree(impgraph, normalized = TRUE, loops = FALSE)
 ```
 
 ### Computing the reGAIN matrix
@@ -339,7 +297,7 @@ load("jap_reGAIN.RData")
 #     # Adjacency matrix to graph
 #     camb_Adj_g <- graph.adjacency(camb_Adj_partial)
 #     # page_woPKRank centrality
-#     camb_page_woPK <- page.rank(camb_Adj_g)$vector
+#     camb_page_woPK <- Rinbix::PageRank(camb_Adj_g)$vector
 #     camb_page_woPK.sort <- sort(camb_page_woPK, T)
 #     top_camb_page_woPK <- camb_page_woPK.sort[1:200]
 #     page_woPK_inner.features <- c(page_woPK_inner.features, top_camb_page_woPK)
@@ -391,7 +349,7 @@ pr_wo_test <- page_woPK_test_acc[which.min(page_woPK_train_acc - page_woPK_test_
 #     a <- eigen(camb_Adj_partial)
 #     alpha = signif(1/max(a$values), digits = 2)
 #     beta <- rep(1, nrow(camb_Adj_partial))/nrow(camb_Adj_partial)
-#     camb_katz_woPK <- katz.centrality(camb_Adj_partial, alpha, beta)
+#     camb_katz_woPK <- Rinbix::EpistasisKatz(camb_Adj_partial, alpha, beta)
 #     names(camb_katz_woPK) <- colnames(camb_Adj_partial)
 #     camb_katz_woPK.sort <- sort(camb_katz_woPK, T)
 #     top_camb_katz_woPK <- camb_katz_woPK.sort[1:200]
@@ -443,7 +401,7 @@ k_wo_test <- katz_woPK_test_acc[which.min(katz_woPK_train_acc - katz_woPK_test_a
 #     alpha = 1/mean(colSums(camb_Regain$reGAIN))
 #     beta = diag(camb_Regain$reGAIN)
 #     diag(camb_Regain$reGAIN) <- 0
-#     camb_ekatz_woPK <- katz.centrality(camb_Regain$reGAIN, alpha, beta)
+#     camb_ekatz_woPK <- Rinbix::EpistasisKatz(camb_Regain$reGAIN, alpha, beta)
 #     names(camb_ekatz_woPK) <- colnames(camb_Regain$reGAIN)
 #     camb_ekatz_woPK.sort <- sort(camb_ekatz_woPK, T)
 #     top_camb_ekatz_woPK <- camb_ekatz_woPK.sort[1:200]
@@ -541,7 +499,7 @@ er_wo_test <- ER_woPK_test_acc[which.min(ER_woPK_train_acc - ER_woPK_test_acc)]
 #     # Adjacency matrix to graph
 #     camb_Adj_g <- graph.adjacency(camb_Adj_partial)
 #     # page_wPKRank centrality
-#     camb_page_wPK <- as.numeric(my.pagerank(camb_Adj_partial, IMP_deg))
+#     camb_page_wPK <- as.numeric(Rinbix::PageRank(camb_Adj_partial, IMP_deg))
 #     names(camb_page_wPK) <- rownames(camb_Adj_partial)
 #     camb_page_wPK.sort <- sort(camb_page_wPK, T)
 #     top_camb_page_wPK <- camb_page_wPK.sort[1:200]
@@ -591,7 +549,7 @@ pr_w_test <- page_wPK_test_acc[which.min(page_wPK_train_acc - page_wPK_test_acc)
 #     # katz_wPK centrality
 #     a <- eigen(camb_Adj_partial)
 #     alpha <- signif(1/max(a$values), digits = 2)
-#     camb_katz_wPK <- katz.centrality(camb_Adj_partial, alpha, beta = IMP_deg)
+#     camb_katz_wPK <- Rinbix::EpistasisKatz(camb_Adj_partial, alpha, beta = IMP_deg)
 #     names(camb_katz_wPK) <- rownames(camb_Adj_partial)
 #     camb_katz_wPK.sort <- sort(camb_katz_wPK, T)
 #     top_camb_katz_wPK <- camb_katz_wPK.sort[1:200]
@@ -642,7 +600,7 @@ k_w_test <- katz_wPK_test_acc[which.min(katz_wPK_train_acc - katz_wPK_test_acc)]
 #     # ekatz_wPK centrality
 #     beta <- diag(camb_Regain$reGAIN)
 #     diag(camb_Regain$reGAIN) <- 0
-#     camb_ekatz_wPK <- katz.centrality(camb_Regain$reGAIN, IMP_deg, beta)
+#     camb_ekatz_wPK <- Rinbix::EpistasisKatz(camb_Regain$reGAIN, IMP_deg, beta)
 #     names(camb_ekatz_wPK) <- colnames(camb_expr)
 #     camb_ekatz_wPK.sort <- sort(camb_ekatz_wPK, T)
 #     top_camb_ekatz_wPK <- camb_ekatz_wPK.sort[1:200]
@@ -691,7 +649,7 @@ ek_w_test <- ekatz_wPK_test_acc[which.min(ekatz_wPK_train_acc - ekatz_wPK_test_a
 #     rownames(regain_matrix) <- NULL
 #     camb_Regain <- Rinbix::regainInbix(regain_matrix)
 #     # ER_wPKrank centrality
-#     camb_ER_wPKrank <- EpistasisRank(camb_Regain$reGAIN, IMP_deg)
+#     camb_ER_wPKrank <- Rinbix::EpistasisRank(camb_Regain$reGAIN, IMP_deg)
 #     top_camb_ER_wPK <- camb_ER_wPKrank[1:200,]
 #     ER_wPK_inner.features <- c(ER_wPK_inner.features, as.character(top_camb_ER_wPK$gene))
 #     ER_wPK_features <- c(ER_wPK_features, as.character(top_camb_ER_wPK$gene))
@@ -721,17 +679,19 @@ er_w_test <- ER_wPK_test_acc[which.min(ER_wPK_train_acc - ER_wPK_test_acc)]
 ## XGBoost
 ```{r}
 # Training
-camb_dtrain <- xgb.DMatrix(as.matrix(camb_fltr.expr), label = camb_class)
-camb_xgb_model <- xgb.train(data=camb_dtrain, max.depth=1, eta = .01, nthread = 2, 
+camb_dtrain <- xgboost::xgb.DMatrix(as.matrix(camb_fltr.expr), label = camb_class)
+camb_xgb_model <- xgboost::xgb.train(data=camb_dtrain, max.depth=2, eta = .1, nthread = 2, 
                                    nround=1, gamma = 0, min_child_weight = 1, max_delta_step = 1, 
-                                   subsample = 0.5, objective = "binary:logistic")
+                                   subsample = 0.4, objective = "binary:logistic")
 
 camb_xgb_pred <- predict(camb_xgb_model, as.matrix(camb_fltr.expr))
-xgb_train <- accuracy(camb_class, camb_xgb_pred)$prop.correct
+xgb_train <- SDMTools::accuracy(camb_class, camb_xgb_pred)$prop.correct
+xgb_train
 
 # Testing
 jap_xgb_pred <- predict(camb_xgb_model, as.matrix(jap_fltr.expr))
-xgb_test <- accuracy(jap_class, jap_xgb_pred)$prop.correct
+xgb_test <- SDMTools::accuracy(jap_class, jap_xgb_pred)$prop.correct
+xgb_test
 ```
 
 
@@ -749,33 +709,33 @@ PR.Katz_df <- data.frame(
 EK.ER_df <- data.frame(
   Data = factor(c("Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test",
                   "Cambridge-Train", "Japan-Test", "Cambridge-Train", "Japan-Test"), levels = c("Cambridge-Train", "Japan-Test")),
-  Method = factor(c("EK", "EK", "ER", "ER", "xgb", "xgb", "EK", "EK", "ER", "ER"),  levels = c("EK", "ER", "xgb")),
-  Accuracy = c(ek_wo_train, ek_wo_test, er_wo_train, er_wo_test, xgb_train, xgb_test, ek_w_train, ek_w_test, er_w_train, er_w_test),
+  Method = factor(c("ER", "ER", "EK", "EK", "xgb", "xgb", "ER", "ER", "EK", "EK"),  levels = c("ER", "EK", "xgb")),
+  Accuracy = c(er_wo_train, er_wo_test, ek_wo_train, ek_wo_test, xgb_train, xgb_test, er_w_train, er_w_test, ek_w_train, ek_w_test),
   Status = c("no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge", "no Prior Knowledge",
              "Prior Knowledge", "Prior Knowledge", "Prior Knowledge", "Prior Knowledge")
 )
 
 
-p1 <- ggplot(PR.Katz_df, aes(x = Data, y = Accuracy, group = Method)) +
-  ggtitle("Co-expression Networks") + theme(plot.title = element_text(hjust = 0.5)) +
-  geom_point(aes(shape=Method), size = 2) + geom_line(aes(linetype=Method)) +
-  theme(axis.title.x=element_blank()) +
-  scale_linetype_manual(values=c("twodash", "solid", "dashed"))+
-  facet_wrap(~Status) +
-  theme(legend.position=c(0.95, 0.5), legend.text=element_text(size=6), legend.title = element_text(size=6))
-p2 <- ggplot(EK.ER_df, aes(x = Data, y = Accuracy, group = Method)) +
-  ggtitle("Epistasis Networks") + theme(plot.title = element_text(hjust = 0.5)) +
-  geom_point(aes(shape=Method), size = 2) + geom_line(aes(linetype=Method)) +
-  theme(axis.title.x=element_blank()) +
-  scale_linetype_manual(values=c("twodash", "solid" ,"dashed"))+
-  facet_wrap(~Status) +
-  theme(legend.position=c(0.95, 0.5), legend.text=element_text(size=6), legend.title = element_text(size=6))
+p1 <- ggplot2::ggplot(PR.Katz_df, ggplot2::aes(x = Data, y = Accuracy, group = Method)) +
+  ggplot2::ggtitle("Co-expression Networks") + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::geom_point(ggplot2::aes(shape=Method), size = 2) + ggplot2::geom_line(ggplot2::aes(linetype=Method)) +
+  ggplot2::theme(axis.title.x=ggplot2::element_blank()) +
+  ggplot2::scale_linetype_manual(values=c("twodash", "solid", "dashed"))+
+  ggplot2::facet_wrap(~Status) +
+  ggplot2::theme(legend.position=c(0.95, 0.5), legend.text=ggplot2::element_text(size=6), legend.title = ggplot2::element_text(size=6))
+p2 <- ggplot2::ggplot(EK.ER_df, ggplot2::aes(x = Data, y = Accuracy, group = Method)) +
+  ggplot2::ggtitle("Epistasis Networks") + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
+  ggplot2::geom_point(ggplot2::aes(shape=Method), size = 2) + ggplot2::geom_line(ggplot2::aes(linetype=Method)) +
+  ggplot2::theme(axis.title.x=ggplot2::element_blank()) +
+  ggplot2::scale_linetype_manual(values=c("twodash", "solid" ,"dashed"))+
+  ggplot2::facet_wrap(~Status) +
+  ggplot2::theme(legend.position=c(0.95, 0.5), legend.text=ggplot2::element_text(size=6), legend.title = ggplot2::element_text(size=6))
 ```
 
 
-Plot of classification accuracy associated with five methods, PageRank(PK), Katz, Epistasis-Katz(EK), EpistasisRank(ER), and XGBoost (xgb). Methods in above panel use co-expression network and methods in bottom panel use the reGAIN network. Also, accuracies at the left side don't use prior knowledge and accuracies at right side use the prior knowledge.
+Training accuracy (Cambridge data) and independent validation accuracy (Japan data) with centrality feature selection without prior knowledge (left panels) and with prior knowledge (right panels). Top: co-expression net-work centrality feature selection methods, PageRank (PR) and Katz. Bottom row: expression-epistasis network centrality methods, EpistasisRank (ER) and EpistasisKatz (EK). Accuracies computed by xgboosted trees with nested cross-validation. Xgboost accuracies without feature selection also shown (squares).
 ```{r}
-grid.arrange(p1, p2, nrow = 2)
+gridExtra::grid.arrange(p1, p2, nrow = 2)
 ```
 
 

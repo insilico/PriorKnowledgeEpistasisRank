@@ -130,11 +130,11 @@ save(camb_expr, file = "camb_sub_expr.RData")
 ```{r}
 # Coefficient of Variation (CoV) filtering -- Cambridge, Japan
 exprData1 <- t(camb_expr)
-camb_expr.fltr_cov <- data.frame(t(cov.filter(exprData1,.559095)$fdata)) 
+camb_expr.fltr_cov <- data.frame(t(Rinbix::geneLowCoefOfVarFilter(exprData1,.559095)$fdata)) 
 dim(camb_expr.fltr_cov)
 
 exprData2 <- t(jap_expr)
-jap_expr.fltr_cov <- data.frame(t(cov.filter(exprData2,.559095)$fdata)) 
+jap_expr.fltr_cov <- data.frame(t(Rinbix::geneLowCoefOfVarFilter(exprData2,.559095)$fdata)) 
 dim(jap_expr.fltr_cov)
 
 camb_genes <- as.character(colnames(camb_expr.fltr_cov))
@@ -243,7 +243,7 @@ diag(camb_Adj) <- 0
 # Adjacency matrix to graph
 camb_Adj_g <- igraph::graph.adjacency(camb_Adj)
 # page_woPKRank centrality
-camb_page_woPK <- page.rank(camb_Adj_g)$vector
+camb_page_woPK <- Rinbix::PageRank(camb_Adj_g)$vector
 camb_page_woPK.sort <- sort(camb_page_woPK, T)
 
 top_camb_page_woPK <- camb_page_woPK.sort[1:200]
@@ -254,7 +254,7 @@ top_camb_page_woPK <- camb_page_woPK.sort[1:200]
 a <- eigen(camb_Adj)
 beta <- rep(1, nrow(camb_Adj))/nrow(camb_Adj)
 alpha <- 1/max(a$values) - (1/max(a$values))/100
-camb_katz_woPK <- katz.centrality(camb_Adj, alpha, beta)
+camb_katz_woPK <- Rinbix::EpistasisKatz(camb_Adj, alpha, beta)
 names(camb_katz_woPK) <- colnames(camb_Adj)
 camb_katz_woPK.sort <- sort(camb_katz_woPK, T)
 
@@ -267,7 +267,7 @@ alpha <- 1/mean(colSums(camb_reGAIN))
 beta <- diag(camb_reGAIN)
 camb_regain.Katz <- camb_reGAIN
 diag(camb_regain.Katz) <- 0
-camb_EK_woPK <- katz.centrality(camb_regain.Katz, alpha, beta)
+camb_EK_woPK <- Rinbix::EpistasisKatz(camb_regain.Katz, alpha, beta)
 names(camb_EK_woPK) <- rownames(camb_reGAIN) 
 camb_EK_woPK.sort <- sort(camb_EK_woPK, T)
 
@@ -276,14 +276,14 @@ top_camb_EK_woPK <- camb_EK_woPK.sort[1:200]
 
 #### EpistasisRank
 ```{r}
-camb_ER_woPK <- EpistasisRank(camb_reGAIN, Gamma_vec = .85)
+camb_ER_woPK <- Rinbix::EpistasisRank(camb_reGAIN, Gamma_vec = .85)
 top_camb_ER_woPK <- camb_ER_woPK[1:200, ]
 ```
 
 #### Coefficient of Variation (cov) filtering
 ```{r}
 exprData <- t(camb_fltr.expr)
-top_camb_cov <- t(cov.filter(exprData,.4874)$fdata) # 200 genes
+top_camb_cov <- t(Rinbix::geneLowCoefOfVarFilter(exprData,.4874)$fdata) # 200 genes
 ```
 
 ### Centrality method with prior knowledge
@@ -296,7 +296,7 @@ IMP_deg <- degree(impgraph, normalized = TRUE, loops = FALSE)
 
 #### PageRank
 ```{r}
-camb_page_wPK <- as.numeric(my.pagerank(camb_Adj, IMP_deg))
+camb_page_wPK <- as.numeric(Rinbix::PageRank(camb_Adj, IMP_deg))
 names(camb_page_wPK) <- rownames(camb_Adj) 
 camb_page_wPK.sort <- sort(camb_page_wPK, T)
 top_camb_page_wPK <- camb_page_wPK.sort[1:200]
@@ -305,7 +305,7 @@ top_camb_page_wPK <- camb_page_wPK.sort[1:200]
 #### Katz
 ```{r}
 alpha <- 1/max(a$values) - (1/max(a$values))/100
-camb_katz_wPK <- katz.centrality(camb_Adj, alpha, beta = IMP_deg)
+camb_katz_wPK <- Rinbix::EpistasisKatz(camb_Adj, alpha, beta = IMP_deg)
 names(camb_katz_wPK) <- rownames(camb_Adj) 
 camb_katz_wPK.sort <- sort(camb_katz_wPK, T)
 top_camb_katz_wPK <- camb_katz_wPK.sort[1:200]
@@ -324,7 +324,7 @@ top_camb_EK_wPK <- camb_ekatz_wPK.sort[1:200]
 
 #### EpistasisRank
 ```{r}
-camb_ER_wPK <- EpistasisRank(camb_reGAIN, IMP_deg)
+camb_ER_wPK <- Rinbix::EpistasisRank(camb_reGAIN, IMP_deg)
 top_camb_ER_wPK <- camb_ER_wPK[1:200, ]
 ```
 

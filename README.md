@@ -3,45 +3,43 @@ Epistasis network centralities that incorporate prior knowledge
 Author: Saeid Parvandeh and Brett McKinney
 
 ### How to install required packages
-    > install.packages("gdata")
-    > library(gdata)
-    > install.packages("devtools", repos="http://cran.r-project.org")
-    > require(devtools)
-    > install_github("insilico/privateEC")
-    > library(privateEC)
-    > install.packages("lattice")
-    > library(lattice)
-    > install.packages("caret", repos="http://cran.r-project.org")
-    > library(caret)
-    > install.packages("glmnet", repos="http://cran.r-project.org")
-    > library(glmnet)
-    > install.packages("CORElearn", repos="http://cran.r-project.org")
-    > library(CORElearn)
-    > install.packages("xgboost", repos="http://cran.r-project.org")
-    > library(xgboost)
-    > install.packages("igraph")
-    > library(igraph)
-    > install.packages("SDMtools")
-    > library(SDMtools)
-    > install_github("insilico/Rinbix")
-    > library(Rinbix)
-    > install.packages("ggplot2")
-    > library(ggplot2)
-    > install.packages("gridExtra")
-    > library(gridExtra)
+    > check.packages <- function(pkg){
+      # check.packages function: install and load multiple R packages.
+      # Check to see if packages are installed. Install them if they are not, 
+      # then load them into the R session.
+      # https://gist.github.com/smithdanielle/9913897
+  
+      new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+      if (length(new.pkg)) 
+       install.packages(new.pkg, repos = "http://cran.us.r-project.org", dependencies = TRUE)
+      sapply(pkg, require, character.only = TRUE)
+    > }
+
+    > if (!("devtools" %in% installed.packages()[,"Package"])){
+        install.packages("devtools", repos = "http://cran.us.r-project.org", dependencies = TRUE)
+    > }
+    > library(devtools)
+
+    # install github package
+    > if (!("Rinbix" %in% installed.packages()[,"Package"])){
+        devtools::install_github("insilico/Rinbix", build_vignettes = TRUE)
+    > }
+
+    # install cran packages
+    > packages <- c("ggplot2", "CORElearn", "gridExtra", "lattice", "caret", "glmnet", "xgboost", "igraph",
+              "gdata", "SDMtools")
+
+    # install bioconductor packages
     > source("https://bioconductor.org/biocLite.R")
     > biocLite("GEOquery")
-    > library(GEOquery)
     > biocLite("Biobase")
-    > library(Biobase)
     > biocLite("preprocessCore")
-    > library(preprocessCore)
     
 
 ### How to find vignettes
 You will be able to find two vignettes, pathway.Rmd and classification.Rmd. The first one manifests the steps of creating pathaway enrichment and how prior knowledge improve Reactome Pathways for MDD, and the second shows the classification accuracies where we add prior knowledge. 
 
 ### Accuracy plot
-Prior knowledge effect of epistasis centrality on training accuracy (Cambridge data on left) and independent validation accuracy (Japan data on right). Accuracies of four different centrality-based feature selection methods with prior knowledge (PK) and without prior knowledge (no PK) using nested cross-validated classification with xgboosted trees. Centralities include PageRank (PR), Katz, Epistasis Katz (EK), EpistasisRank (ER). We compare the accuracy with no prior knowledge and coefficient of variation (CoV) filtering (triangles) and xgboost only on all genes (diamonds).
+Training accuracy (Cambridge data) and independent validation accuracy (Japan data) with centrality feature selection without prior knowledge (left panels) and with prior knowledge (right panels). Top: co-expression net-work centrality feature selection methods, PageRank (PR) and Katz. Bottom row: expression-epistasis network centrality methods, EpistasisRank (ER) and EpistasisKatz (EK). Accuracies computed by xgboosted trees with nested cross-validation. Xgboost accuracies without feature selection also shown (squares).
 
-![Accuracy plots](Acc_original_plot_revised.png)
+![Accuracy plots](Acc_original_plot.png)
