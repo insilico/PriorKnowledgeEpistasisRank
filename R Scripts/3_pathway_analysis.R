@@ -39,10 +39,8 @@ camb_expre.cor <- cor(camb_fltr.expr)
 camb_Adj <- ifelse(abs(camb_expre.cor) > .15, 1, 0)
 diag(camb_Adj) <- 0
 
-# Adjacency matrix to graph
-camb_Adj_g <- graph.adjacency(camb_Adj)
-# page_woPKRank centrality
-camb_page_woPK <- Rinbix::PageRank(camb_Adj_g)$vector
+# PageRank_woPK centrality
+camb_page_woPK <- Rinbix::PageRank(camb_Adj)[, 1]
 camb_page_woPK.sort <- sort(camb_page_woPK, T)
 top_camb_page_woPK <- camb_page_woPK.sort[1:200]
 
@@ -92,10 +90,7 @@ camb_expre.cor <- cor(camb_fltr.expr)
 camb_Adj <- ifelse(abs(camb_expre.cor) > .15, 1, 0)
 diag(camb_Adj) <- 0
 
-# Adjacency matrix to graph
-camb_Adj_g <- graph.adjacency(camb_Adj)
-# page_wPKRank centrality
-# page_wPKRank centrality
+# PageRank_wPK centrality
 camb_page_wPK <- as.numeric(Rinbix::PageRank(camb_Adj, IMP_deg))
 names(camb_page_wPK) <- rownames(camb_Adj) 
 camb_page_wPK.sort <- sort(camb_page_wPK, T)

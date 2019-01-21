@@ -48,10 +48,9 @@ for (i in 1:5){
     # co-expression to binary
     camb_Adj_partial <- ifelse(abs(camb_expre.cor) > .15, 1, 0)
     diag(camb_Adj_partial) <- 0
-    # Adjacency matrix to graph
-    camb_Adj_g <- graph.adjacency(camb_Adj_partial)
-    # page_woPKRank centrality
-    camb_page_woPK <- Rinbix::PageRank(camb_Adj_g)$vector
+    
+    # PageRank_woPK centrality
+    camb_page_woPK <- Rinbix::PageRank(camb_Adj_partial)[, 1]
     camb_page_woPK.sort <- sort(camb_page_woPK, T)
     top_camb_page_woPK <- camb_page_woPK.sort[1:200]
     page_woPK_inner.features <- c(page_woPK_inner.features, top_camb_page_woPK)
@@ -194,7 +193,7 @@ for (i in 1:5){
     rownames(regain_matrix) <- NULL
     camb_Regain <- regainInbix(regain_matrix)
     # ER_woPKrank centrality
-    camb_ER_woPKrank <- snprankInbix(camb_Regain$reGAIN, gamma = .85)
+    camb_ER_woPKrank <- Rinbix::EpistasisRank(camb_Regain$reGAIN, gamma = .85)
     top_camb_ER_woPK <- camb_ER_woPKrank[1:200, ]
     ER_woPK_inner.features <- c(ER_woPK_inner.features, as.character(top_camb_ER_woPK$gene))
     ER_woPK_features <- c(ER_woPK_features, as.character(top_camb_ER_woPK$gene))
@@ -287,9 +286,7 @@ for (i in 1:5){
     # co-expression to binary
     camb_Adj_partial <- ifelse(abs(camb_expre.cor) > .15, 1, 0)
     diag(camb_Adj_partial) <- 0
-    # Adjacency matrix to graph
-    camb_Adj_g <- graph.adjacency(camb_Adj_partial)
-    # page_wPKRank centrality
+    # PageRank_wPK centrality
     camb_page_wPK <- as.numeric(Rinbix::PageRank(camb_Adj_partial, IMP_deg))
     names(camb_page_wPK) <- rownames(camb_Adj_partial) 
     camb_page_wPK.sort <- sort(camb_page_wPK, T)
